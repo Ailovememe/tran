@@ -17,7 +17,7 @@
 <body>
     <h1>CSV to Base Chain Batch Transactions</h1>
     <input type="file" id="fileInput" accept=".csv">
-    <button id="submitBtn" disabled>提交</button> <!-- 初始禁用按钮 -->
+    <button id="submitBtn" disabled>Submit</button> <!-- Button initially disabled -->
     <div id="transactionList"></div>
 
     <script>
@@ -28,11 +28,11 @@
         document.getElementById('fileInput').addEventListener('change', handleFileSelect);
         document.getElementById('submitBtn').addEventListener('click', processTransactions);
 
-        // 处理文件选择并解析CSV内容
+        // Handle file selection and parse CSV content
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) {
-                alert("请上传CSV文件");
+                alert("Please upload a CSV file");
                 return;
             }
 
@@ -42,59 +42,59 @@
                 csvData = parseCSV(content);
 
                 if (csvData.length > 0) {
-                    console.log('CSV数据已加载:', csvData.length, '行'); // 调试输出
-                    document.getElementById('submitBtn').disabled = false; // 启用提交按钮
+                    console.log('CSV data loaded:', csvData.length, 'rows'); // Debug output
+                    document.getElementById('submitBtn').disabled = false; // Enable submit button
                 } else {
-                    console.log('CSV文件为空或格式不正确');
-                    alert('CSV文件无效，请检查内容');
+                    console.log('CSV file is empty or incorrectly formatted');
+                    alert('Invalid CSV file, please check the contents');
                 }
             };
             reader.readAsText(file);
         }
 
-        // 解析CSV文件，将其转换为对象数组
+        // Parse the CSV file and convert it to an array of objects
         function parseCSV(content) {
             const lines = content.split('\n');
             return lines.map(line => {
                 const [address, amount] = line.split(',');
                 return { address: address && address.trim(), amount: amount && amount.trim() };
-            }).filter(item => item.address && item.amount); // 确保地址和金额都存在
+            }).filter(item => item.address && item.amount); // Ensure both address and amount exist
         }
 
-        // 检测 MetaMask 是否安装，并处理交易
+        // Check if MetaMask is installed and handle transactions
         async function processTransactions() {
             if (csvData.length === 0) {
-                alert('请先上传CSV文件');
+                alert('Please upload a CSV file first');
                 return;
             }
 
             if (typeof window.ethereum === 'undefined') {
-                alert('请安装MetaMask浏览器扩展');
+                alert('Please install the MetaMask browser extension');
                 return;
             }
 
             const web3 = new Web3(window.ethereum);
 
             try {
-                // 检测 MetaMask 是否连接，并请求账户授权
+                // Check if MetaMask is connected and request account authorization
                 const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
                 if (!accounts || accounts.length === 0) {
-                    throw new Error('无法访问账户，请检查MetaMask权限');
+                    throw new Error('Unable to access accounts, please check MetaMask permissions');
                 }
             } catch (error) {
-                console.error('MetaMask授权失败:', error);
-                alert('MetaMask授权失败，请检查MetaMask设置');
+                console.error('MetaMask authorization failed:', error);
+                alert('MetaMask authorization failed, please check MetaMask settings');
                 return;
             }
 
-            // 开始处理交易批次
+            // Start processing transaction batches
             processBatch(web3);
         }
 
-        // 分批次处理CSV中的交易
+        // Process transactions in batches from the CSV
         async function processBatch(web3) {
             if (currentBatch * BATCH_SIZE >= csvData.length) {
-                console.log('所有交易已处理完成');
+                console.log('All transactions have been processed');
                 return;
             }
 
@@ -121,10 +121,10 @@
                 const totalValue = transactions.reduce((sum, tx) => sum.add(web3.utils.toBN(tx.value)), web3.utils.toBN(0));
 
                 if (web3.utils.toBN(balance).lt(totalValue.add(totalCost))) {
-                    throw new Error('余额不足以执行此批次交易');
+                    throw new Error('Insufficient balance to execute this batch of transactions');
                 }
 
-                // 执行交易并等待结果
+                // Execute transactions and wait for results
                 const txPromises = transactions.map(tx => 
                     web3.eth.sendTransaction(tx)
                 );
@@ -133,28 +133,28 @@
                 
                 displayTransaction(currentBatch, results.map(r => r.transactionHash).join(', '), 'success');
                 currentBatch++;
-                processBatch(web3); // 处理下一批交易
+                processBatch(web3); // Process next batch of transactions
             } catch (error) {
-                console.error('交易发生错误:', error);
+                console.error('Transaction error:', error);
                 displayTransaction(currentBatch, null, 'error', error.message);
             }
         }
 
-        // 显示交易结果
+        // Display transaction results
         function displayTransaction(batchNumber, txHash, status, errorMsg) {
             const transactionList = document.getElementById('transactionList');
             const transactionElement = document.createElement('div');
             transactionElement.className = `transaction ${status}`;
             transactionElement.innerHTML = `
-                <p>批次 ${batchNumber + 1}: ${status === 'success' ? '成功' : '失败'}</p>
-                ${txHash ? `<p>交易哈希: ${txHash}</p>` : ''}
-                ${errorMsg ? `<p>错误: ${errorMsg}</p>` : ''}
-                ${status === 'error' ? '<button onclick="retryBatch(' + batchNumber + ')">重试</button>' : ''}
+                <p>Batch ${batchNumber + 1}: ${status === 'success' ? 'Success' : 'Failure'}</p>
+                ${txHash ? `<p>Transaction Hash: ${txHash}</p>` : ''}
+                ${errorMsg ? `<p>Error: ${errorMsg}</p>` : ''}
+                ${status === 'error' ? '<button onclick="retryBatch(' + batchNumber + ')">Retry</button>' : ''}
             `;
             transactionList.appendChild(transactionElement);
         }
 
-        // 允许用户重试失败的批次
+        // Allow user to retry failed batches
         function retryBatch(batchNumber) {
             currentBatch = batchNumber;
             const web3 = new Web3(window.ethereum);
